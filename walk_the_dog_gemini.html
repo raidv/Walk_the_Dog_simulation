@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Walker Path Simulator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .config-controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .config-controls label {
+            font-weight: 500;
+        }
+
+        .config-controls select,
+        .config-controls input {
+            margin-left: 5px;
+        }
+
+        #canvas {
+            width: 800px;
+            height: 500px;
+            border: 1px solid #ccc;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #pathDog,
+        #pathWalker {
+            fill: none;
+            stroke-width: 3px;
+            stroke-dasharray: 5 5;
+        }
+
+        #pathDog {
+            stroke: #007aff;
+        }
+
+        /* Blue */
+        #pathWalker {
+            stroke: #34c759;
+        }
+
+        /* Green */
+        #dog {
+            fill: #007aff;
+        }
+
+        #walker {
+            fill: #34c759;
+        }
+
+        #leash {
+            stroke: #ff3b30;
+            /* Red */
+            stroke-width: 2px;
+        }
+
+        .slider-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            width: 800px;
+            margin-top: 20px;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .slider-container label {
+            font-size: 1.1em;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            margin: 0 10px;
+        }
+
+        .step-btn {
+            font-size: 1.2em;
+            width: 40px;
+            height: 30px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f4;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .step-btn:hover {
+            background-color: #eee;
+        }
+
+        .back-btn {
+            display: none;
+        }
+
+        #readouts {
+            margin-top: 20px;
+            font-size: 1.2em;
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 800px;
+            box-sizing: border-box;
+        }
+
+        #readouts div {
+            margin: 5px 0;
+        }
+
+        #readouts span {
+            font-weight: 700;
+            min-width: 60px;
+            display: inline-block;
+        }
+
+        #currentLength {
+            color: #007aff;
+        }
+
+        #maxLength {
+            color: #ff3b30;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Dog Walker Path Simulator</h1>
+
+    <div class="config-controls">
+        <div>
+            <label for="pathConfig">Select Path Configuration:</label>
+            <select id="pathConfig">
+                <option value="config1">Configuration 1</option>
+                <option value="config2">Configuration 2</option>
+                <option value="config3">Configuration 3</option>
+                <option value="config4">Configuration 4</option>
+            </select>
+        </div>
+        <div>
+            <input type="checkbox" id="allowBackwards">
+            <label for="allowBackwards">Allow Backwards Movement</label>
+        </div>
+    </div>
+
+    <svg id="canvas" preserveAspectRatio="xMidYMid meet">
+        <path id="pathWalker" vector-scaling="non-scaling-stroke"></path>
+        <path id="pathDog" vector-scaling="non-scaling-stroke"></path>
+        <line id="leash" x1="50" y1="50" x2="50" y2="100" vector-scaling="non-scaling-stroke"></line>
+        <circle id="walker" r="8" vector-scaling="non-scaling-stroke"></circle>
+        <circle id="dog" r="8" vector-scaling="non-scaling-stroke"></circle>
+    </svg>
+
+    <div class="slider-controls">
+        <div class="slider-container">
+            <label for="sliderWalker">Dog Walker</label>
+            <div class="slider-wrapper">
+                <button class="step-btn back-btn" id="walkerBack">‹</button>
+                <input type="range" id="sliderWalker" min="0" value="0">
+                <button class="step-btn fwd-btn" id="walkerFwd">›</button>
+            </div>
+        </div>
+        <div class="slider-container">
+            <label for="sliderDog">Dog</label>
+            <div class="slider-wrapper">
+                <button class="step-btn back-btn" id="dogBack">‹</button>
+                <input type="range" id="sliderDog" min="0" value="0">
+                <button class="step-btn fwd-btn" id="dogFwd">›</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="readouts">
+        <div>Current Leash Length: <span id="currentLength">0.00</span></div>
+        <div>Max Leash Length: <span id="maxLength">0.00</span></div>
+    </div>
+
+
+    <script>
+        // --- CONFIGURATION ---
+        const NUM_STEPS = 100;
+
+        // --- PATH DATA ---
+        const PATH_CONFIGS = {
+            "config1": {
+                walker: { type: 'path', data: "M.44,251.39c16.99-32.96,127.9-154.06,271.4-208.57C427.47-16.29,616.85,2.38,616.36,6.77c-.51,4.63-139.04,37.59-243.07,218.35-86.15,149.69-82.4,338.34-76.22,340.92,0,0,51.24-236.27,393.44-356.38,261.1-91.65,394.48,23.71,394.48,23.71" },
+                dog: { type: 'path', data: "M.5,298.69s1.54-69.52,10.3-90.12,27.29-71.58,53.04-74.16,35.53,52.01,40.17,138.01,35.53,125.14,59.74,127.2,61.8-74.16,65.92-162.22c0,0,3.35-160.08,49.44-162.22s66.95,117.42,72.1,225.05,8.24,197.75,58.71,196.72,71.58-182.82,76.73-297.66,31.93-191.06,61.8-192.09,57.68,101.97,58.71,182.3-4.12,223.5,59.74,224.02,93.73-89.61,94.76-207.02S755.46,2.06,818.8.52s74.16,91.67,75.19,167.88,1.54,167.88,59.22,183.33,61.28-41.2,74.16-72.1c12.87-30.9,24.72-77.76,45.83-73.13s15.96,48.92,11.84,74.16" }
+            },
+            "config2": {
+                // [FIXED] Added 'invert: true' to the walker path
+                walker: { type: 'path', data: "M1069.9,228.3c-15.32-25.02-202.72-77.62-437.62,0-234.89,77.62-327.32,333.96-333.45,333.45s6.13-215.49,72.51-338.04S621.05,9.24,620.03,2.09,360.63,11.79,238.59,55.2.39,245.64.39,245.64", invert: true },
+                dog: { type: 'path', data: "M8.35,381.7S-26.14,240.28,49.44,156.53s125.62-93.96,213.45-112.34S702.04-4.83,800.08,1.3s261.45,55.04,307.4,135.26,49.02,143.55,31.66,241.59-12.26,152.17-119.49,249.19-473.87,184.85-674.04,150.13-224.68-73.53-251.23-113.36S29.01,534.4,23.91,477.21s15.32-74.55,37.79-102.13c22.47-27.57,147.06-144,346.21-175.66s323.74-27.57,392.17-15.32,184.85,36.77,233.87,100.09,43.55,79.62,43.55,79.62" }
+            },
+            "config3": {
+                walker: { type: 'points', data: ".36 367.07 283.89 662.36 626.24 1.19 907.42 682.36 1078.25 359.42" },
+                dog: { type: 'points', data: ".5 402.85 .5 .5 1135.79 .5 1135.79 789.91 44.03 789.91 44.03 32.26 1108.74 32.26 1108.74 753.44 78.15 753.44 77.13 395.21 1078.39 395.21" }
+            },
+            "config4": {
+                walker: { type: 'points', data: ".5 461.77 .5 804.12 493.44 1.77 493.44 802.95 1085.21 1.77 1085.21 447.65" },
+                dog: { type: 'points', data: ".29 411.03 336.76 653.38 230.88 96.91 943.82 736.91 356.76 1.62 1085 396.91" }
+            }
+        };
+
+        // --- GLOBAL VARIABLES ---
+        let maxLeashLength = 0;
+        let dogPathPoints = [];
+        let walkerPathPoints = [];
+
+        // --- DOM ELEMENT REFERENCES ---
+        const svgEl = document.getElementById('canvas');
+        const dogPathEl = document.getElementById('pathDog');
+        const walkerPathEl = document.getElementById('pathWalker');
+        const dogEl = document.getElementById('dog');
+        const walkerEl = document.getElementById('walker');
+        const leashEl = document.getElementById('leash');
+        const sliderDogEl = document.getElementById('sliderDog');
+        const sliderWalkerEl = document.getElementById('sliderWalker');
+        const allowBackwardsEl = document.getElementById('allowBackwards');
+        const configSelectEl = document.getElementById('pathConfig');
+        const currentLengthEl = document.getElementById('currentLength');
+        const maxLengthEl = document.getElementById('maxLength');
+        const backBtns = document.querySelectorAll('.back-btn');
+        const walkerBackBtn = document.getElementById('walkerBack');
+        const walkerFwdBtn = document.getElementById('walkerFwd');
+        const dogBackBtn = document.getElementById('dogBack');
+        const dogFwdBtn = document.getElementById('dogFwd');
+
+        // --- HELPER FUNCTIONS ---
+        function getDistance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+
+        /**
+         * [UPDATED] discretizePath now accepts 'isInverted' flag.
+         */
+        function discretizePath(pathElement, numSteps, tx = 0, ty = 0, isInverted = false) {
+            const totalLength = pathElement.getTotalLength();
+            const points = [];
+            for (let i = 0; i <= numSteps; i++) {
+                let distance;
+                const percent = i / numSteps;
+
+                if (isInverted) {
+                    // Traverse from 100% (totalLength) down to 0%
+                    distance = totalLength - (percent * totalLength);
+                } else {
+                    // Traverse from 0% up to 100% (totalLength)
+                    distance = percent * totalLength;
+                }
+
+                const pt = pathElement.getPointAtLength(distance);
+
+                pt.x += tx;
+                pt.y += ty;
+
+                points.push(pt);
+            }
+            return points;
+        }
+
+        function convertPointsToPathD(pointsStr) {
+            const points = pointsStr.trim().split(/\s+/);
+            if (points.length < 2) return "";
+
+            let d = `M ${points[0]} ${points[1]}`;
+            for (let i = 2; i < points.length; i += 2) {
+                if (points[i + 1] !== undefined) {
+                    d += ` L ${points[i]} ${points[i + 1]}`;
+                }
+            }
+            return d;
+        }
+
+        function getBoundsFromPoints(pointArrays) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+            for (const points of pointArrays) {
+                if (points.length === 0) continue;
+                for (const pt of points) {
+                    if (pt.x < minX) minX = pt.x;
+                    if (pt.x > maxX) maxX = pt.x;
+                    if (pt.y < minY) minY = pt.y;
+                    if (pt.y > maxY) maxY = pt.y;
+                }
+            }
+
+            if (minX === Infinity) return { x: 0, y: 0, width: 100, height: 100 };
+
+            return {
+                x: minX,
+                y: minY,
+                width: maxX - minX,
+                height: maxY - minY
+            };
+        }
+
+        // --- CORE LOGIC FUNCTIONS ---
+        function updatePositions() {
+            const dogIndex = parseInt(sliderDogEl.value);
+            const walkerIndex = parseInt(sliderWalkerEl.value);
+            if (!dogPathPoints[dogIndex] || !walkerPathPoints[walkerIndex]) return;
+
+            const dogPos = dogPathPoints[dogIndex];
+            const walkerPos = walkerPathPoints[walkerIndex];
+
+            dogEl.setAttribute('cx', dogPos.x);
+            dogEl.setAttribute('cy', dogPos.y);
+            walkerEl.setAttribute('cx', walkerPos.x);
+            walkerEl.setAttribute('cy', walkerPos.y);
+            leashEl.setAttribute('x1', dogPos.x);
+            leashEl.setAttribute('y1', dogPos.y);
+            leashEl.setAttribute('x2', walkerPos.x);
+            leashEl.setAttribute('y2', walkerPos.y);
+
+            updateLeashLength(dogPos, walkerPos);
+        }
+
+        function updateLeashLength(p1, p2) {
+            const currentDist = getDistance(p1, p2);
+            currentLengthEl.textContent = currentDist.toFixed(2);
+            if (currentDist > maxLeashLength) {
+                maxLeashLength = currentDist;
+                maxLengthEl.textContent = maxLeashLength.toFixed(2);
+            }
+        }
+
+        function resetMaxLeash() {
+            maxLeashLength = 0;
+            maxLengthEl.textContent = "0.00";
+            updatePositions();
+        }
+
+        /**
+         * [UPDATED] Alignment logic now respects the 'invert' flag.
+         */
+        function loadPathConfig(configName) {
+            const paths = PATH_CONFIGS[configName];
+            if (!paths) {
+                console.error("Path configuration not found:", configName);
+                return;
+            }
+
+            // --- 1. Get Path Data and Invert Flags ---
+            const walkerConfig = paths.walker;
+            const dogConfig = paths.dog;
+
+            const walkerD = walkerConfig.type === 'path' ? walkerConfig.data : convertPointsToPathD(walkerConfig.data);
+            const dogD = dogConfig.type === 'path' ? dogConfig.data : convertPointsToPathD(dogConfig.data);
+
+            const invertWalker = walkerConfig.invert || false;
+            const invertDog = dogConfig.invert || false;
+
+            // --- 2. Set Path Attributes ---
+            walkerPathEl.setAttribute('transform', '');
+            dogPathEl.setAttribute('transform', '');
+            walkerPathEl.setAttribute('d', walkerD);
+            dogPathEl.setAttribute('d', dogD);
+
+            dogPathEl.style.display = dogD ? 'block' : 'none';
+            walkerPathEl.style.display = walkerD ? 'block' : 'none';
+
+            if (dogD && walkerD) {
+                try {
+                    // --- 3. [UPDATED] Align Paths ---
+                    // Get the "start" point for each path.
+                    // If inverted, the start point is at the *end* of the path data (totalLength).
+                    const walkerStartPoint = walkerPathEl.getPointAtLength(invertWalker ? walkerPathEl.getTotalLength() : 0);
+                    const dogStartPoint = dogPathEl.getPointAtLength(invertDog ? dogPathEl.getTotalLength() : 0);
+
+                    // Calculate translation needed to move dog's start to walker's start
+                    const tx = walkerStartPoint.x - dogStartPoint.x;
+                    const ty = walkerStartPoint.y - dogStartPoint.y;
+
+                    // Apply the translation
+                    dogPathEl.setAttribute('transform', `translate(${tx}, ${ty})`);
+
+                    // --- 4. Discretize Paths ---
+                    // Pass the invert flags to the discretize function
+                    dogPathPoints = discretizePath(dogPathEl, NUM_STEPS, tx, ty, invertDog);
+                    walkerPathPoints = discretizePath(walkerPathEl, NUM_STEPS, 0, 0, invertWalker);
+
+                    // --- 5. Calculate Dynamic ViewBox ---
+                    const padding = 20;
+                    const bounds = getBoundsFromPoints([walkerPathPoints, dogPathPoints]);
+
+                    const vbX = bounds.x - padding;
+                    const vbY = bounds.y - padding;
+                    const vbWidth = (bounds.width === 0 ? 1 : bounds.width) + (padding * 2);
+                    const vbHeight = (bounds.height === 0 ? 1 : bounds.height) + (padding * 2);
+
+                    svgEl.setAttribute('viewBox', `${vbX} ${vbY} ${vbWidth} ${vbHeight}`);
+
+                } catch (e) {
+                    console.error("Error processing SVG path data. Is it valid?", e);
+                    dogPathPoints = [];
+                    walkerPathPoints = [];
+                }
+            } else {
+                dogPathPoints = [];
+                walkerPathPoints = [];
+            }
+
+            // --- 6. Reset UI ---
+            sliderDogEl.value = 0;
+            sliderWalkerEl.value = 0;
+            resetMaxLeash();
+        }
+
+        function toggleBackButtons() {
+            const isChecked = allowBackwardsEl.checked;
+            backBtns.forEach(btn => {
+                btn.style.display = isChecked ? 'inline-block' : 'none';
+            });
+        }
+
+        function stepSlider(sliderEl, direction) {
+            let currentValue = parseInt(sliderEl.value);
+            let newValue = currentValue + direction;
+            if (newValue < 0) newValue = 0;
+            if (newValue > NUM_STEPS) newValue = NUM_STEPS;
+            sliderEl.value = newValue;
+            sliderEl.dispatchEvent(new Event('input'));
+        }
+
+        // --- INITIALIZATION ---
+        function init() {
+            sliderDogEl.max = NUM_STEPS;
+            sliderWalkerEl.max = NUM_STEPS;
+
+            sliderDogEl.addEventListener('input', updatePositions);
+            sliderWalkerEl.addEventListener('input', updatePositions);
+            allowBackwardsEl.addEventListener('change', toggleBackButtons);
+            configSelectEl.addEventListener('change', (e) => loadPathConfig(e.target.value));
+            walkerBackBtn.addEventListener('click', () => stepSlider(sliderWalkerEl, -1));
+            walkerFwdBtn.addEventListener('click', () => stepSlider(sliderWalkerEl, 1));
+            dogBackBtn.addEventListener('click', () => stepSlider(sliderDogEl, -1));
+            dogFwdBtn.addEventListener('click', () => stepSlider(sliderDogEl, 1));
+
+            loadPathConfig(configSelectEl.value);
+            toggleBackButtons();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
