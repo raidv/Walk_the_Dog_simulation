@@ -227,7 +227,6 @@
                 dog: { type: 'path', data: "M.5,298.69s1.54-69.52,10.3-90.12,27.29-71.58,53.04-74.16,35.53,52.01,40.17,138.01,35.53,125.14,59.74,127.2,61.8-74.16,65.92-162.22c0,0,3.35-160.08,49.44-162.22s66.95,117.42,72.1,225.05,8.24,197.75,58.71,196.72,71.58-182.82,76.73-297.66,31.93-191.06,61.8-192.09,57.68,101.97,58.71,182.3-4.12,223.5,59.74,224.02,93.73-89.61,94.76-207.02S755.46,2.06,818.8.52s74.16,91.67,75.19,167.88,1.54,167.88,59.22,183.33,61.28-41.2,74.16-72.1c12.87-30.9,24.72-77.76,45.83-73.13s15.96,48.92,11.84,74.16" }
             },
             "config2": {
-                // [FIXED] Added 'invert: true' to the walker path
                 walker: { type: 'path', data: "M1069.9,228.3c-15.32-25.02-202.72-77.62-437.62,0-234.89,77.62-327.32,333.96-333.45,333.45s6.13-215.49,72.51-338.04S621.05,9.24,620.03,2.09,360.63,11.79,238.59,55.2.39,245.64.39,245.64", invert: true },
                 dog: { type: 'path', data: "M8.35,381.7S-26.14,240.28,49.44,156.53s125.62-93.96,213.45-112.34S702.04-4.83,800.08,1.3s261.45,55.04,307.4,135.26,49.02,143.55,31.66,241.59-12.26,152.17-119.49,249.19-473.87,184.85-674.04,150.13-224.68-73.53-251.23-113.36S29.01,534.4,23.91,477.21s15.32-74.55,37.79-102.13c22.47-27.57,147.06-144,346.21-175.66s323.74-27.57,392.17-15.32,184.85,36.77,233.87,100.09,43.55,79.62,43.55,79.62" }
             },
@@ -245,6 +244,8 @@
         let maxLeashLength = 0;
         let dogPathPoints = [];
         let walkerPathPoints = [];
+        let maxWalkerStep = 0; // [NEW] Stores max slider value
+        let maxDogStep = 0;    // [NEW] Stores max slider value
 
         // --- DOM ELEMENT REFERENCES ---
         const svgEl = document.getElementById('canvas');
@@ -270,9 +271,6 @@
             return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
         }
 
-        /**
-         * [UPDATED] discretizePath now accepts 'isInverted' flag.
-         */
         function discretizePath(pathElement, numSteps, tx = 0, ty = 0, isInverted = false) {
             const totalLength = pathElement.getTotalLength();
             const points = [];
@@ -281,10 +279,8 @@
                 const percent = i / numSteps;
 
                 if (isInverted) {
-                    // Traverse from 100% (totalLength) down to 0%
                     distance = totalLength - (percent * totalLength);
                 } else {
-                    // Traverse from 0% up to 100% (totalLength)
                     distance = percent * totalLength;
                 }
 
@@ -335,9 +331,40 @@
         }
 
         // --- CORE LOGIC FUNCTIONS ---
+
+        /**
+         * [UPDATED] Prevents dragging slider backward if checkbox is not checked.
+         */
         function updatePositions() {
-            const dogIndex = parseInt(sliderDogEl.value);
-            const walkerIndex = parseInt(sliderWalkerEl.value);
+            const isBackwardsAllowed = allowBackwardsEl.checked;
+
+            let dogIndex = parseInt(sliderDogEl.value);
+            let walkerIndex = parseInt(sliderWalkerEl.value);
+
+            // --- [NEW] Backward drag prevention logic ---
+            if (!isBackwardsAllowed) {
+                // Check walker
+                if (walkerIndex < maxWalkerStep) {
+                    walkerIndex = maxWalkerStep;
+                    sliderWalkerEl.value = walkerIndex;
+                } else {
+                    maxWalkerStep = walkerIndex;
+                }
+                // Check dog
+                if (dogIndex < maxDogStep) {
+                    dogIndex = maxDogStep;
+                    sliderDogEl.value = dogIndex;
+                } else {
+                    maxDogStep = dogIndex;
+                }
+            } else {
+                // If backwards is allowed, update the "max" to the current
+                // position, so we don't jump if the user un-checks the box.
+                maxWalkerStep = walkerIndex;
+                maxDogStep = dogIndex;
+            }
+            // --- End of new logic ---
+
             if (!dogPathPoints[dogIndex] || !walkerPathPoints[walkerIndex]) return;
 
             const dogPos = dogPathPoints[dogIndex];
@@ -370,9 +397,6 @@
             updatePositions();
         }
 
-        /**
-         * [UPDATED] Alignment logic now respects the 'invert' flag.
-         */
         function loadPathConfig(configName) {
             const paths = PATH_CONFIGS[configName];
             if (!paths) {
@@ -401,21 +425,16 @@
 
             if (dogD && walkerD) {
                 try {
-                    // --- 3. [UPDATED] Align Paths ---
-                    // Get the "start" point for each path.
-                    // If inverted, the start point is at the *end* of the path data (totalLength).
+                    // --- 3. Align Paths ---
                     const walkerStartPoint = walkerPathEl.getPointAtLength(invertWalker ? walkerPathEl.getTotalLength() : 0);
                     const dogStartPoint = dogPathEl.getPointAtLength(invertDog ? dogPathEl.getTotalLength() : 0);
 
-                    // Calculate translation needed to move dog's start to walker's start
                     const tx = walkerStartPoint.x - dogStartPoint.x;
                     const ty = walkerStartPoint.y - dogStartPoint.y;
 
-                    // Apply the translation
                     dogPathEl.setAttribute('transform', `translate(${tx}, ${ty})`);
 
                     // --- 4. Discretize Paths ---
-                    // Pass the invert flags to the discretize function
                     dogPathPoints = discretizePath(dogPathEl, NUM_STEPS, tx, ty, invertDog);
                     walkerPathPoints = discretizePath(walkerPathEl, NUM_STEPS, 0, 0, invertWalker);
 
@@ -443,6 +462,8 @@
             // --- 6. Reset UI ---
             sliderDogEl.value = 0;
             sliderWalkerEl.value = 0;
+            maxWalkerStep = 0; // [NEW] Reset max step
+            maxDogStep = 0;    // [NEW] Reset max step
             resetMaxLeash();
         }
 
