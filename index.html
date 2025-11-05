@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dog Walker Path Simulator</title>
     <style>
+        /* [NEW] Added box-sizing and overflow prevention */
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
@@ -14,21 +19,36 @@
             background-color: #f4f4f4;
             margin: 0;
             padding: 20px;
+            max-width: 100vw;
+            /* [NEW] */
+            overflow-x: hidden;
+            /* [NEW] */
         }
 
         h1 {
             color: #333;
+            text-align: center;
+            /* [NEW] */
         }
 
+        /* [NEW] Made controls flexible */
         .config-controls {
             display: flex;
+            flex-wrap: wrap;
+            /* [NEW] */
             gap: 20px;
             align-items: center;
+            justify-content: center;
+            /* [NEW] */
             margin-bottom: 20px;
             padding: 10px;
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            /* [NEW] */
+            max-width: 800px;
+            /* [NEW] */
         }
 
         .config-controls label {
@@ -40,9 +60,14 @@
             margin-left: 5px;
         }
 
+        /* [UPDATED] Made canvas responsive */
         #canvas {
-            width: 800px;
-            height: 500px;
+            width: 100%;
+            /* [UPDATED] */
+            max-width: 800px;
+            /* [NEW] */
+            height: auto;
+            /* [UPDATED] */
             border: 1px solid #ccc;
             background-color: #ffffff;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -79,11 +104,15 @@
             stroke-width: 2px;
         }
 
+        /* [UPDATED] Made slider controls responsive */
         .slider-controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 40px;
-            width: 800px;
+            width: 100%;
+            /* [UPDATED] */
+            max-width: 800px;
+            /* [UPDATED] */
             margin-top: 20px;
         }
 
@@ -132,6 +161,7 @@
             display: none;
         }
 
+        /* [UPDATED] Made readouts responsive */
         #readouts {
             margin-top: 20px;
             font-size: 1.2em;
@@ -139,7 +169,10 @@
             padding: 15px 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 800px;
+            width: 100%;
+            /* [UPDATED] */
+            max-width: 800px;
+            /* [UPDATED] */
             box-sizing: border-box;
         }
 
@@ -159,6 +192,53 @@
 
         #maxLength {
             color: #ff3b30;
+        }
+
+        /* --- [NEW] MOBILE RESPONSIVE STYLES --- */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                /* Tighter padding */
+            }
+
+            h1 {
+                font-size: 1.5em;
+                /* Smaller title */
+            }
+
+            /* Stack top controls */
+            .config-controls {
+                flex-direction: column;
+                align-items: stretch;
+                /* Make children full-width */
+                gap: 15px;
+            }
+
+            .config-controls div {
+                width: 100%;
+            }
+
+            .config-controls select {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .config-controls label[for="allowBackwards"] {
+                display: block;
+                /* Ensure label doesn't sit weirdly */
+                padding: 5px 0;
+            }
+
+            /* Stack slider controls */
+            .slider-controls {
+                grid-template-columns: 1fr;
+                /* 1 column */
+                gap: 20px;
+            }
+
+            #readouts {
+                font-size: 1.1em;
+            }
         }
     </style>
 </head>
@@ -245,7 +325,7 @@
         let dogPathPoints = [];
         let walkerPathPoints = [];
         let maxWalkerStep = 0; // [NEW] Stores max slider value
-        let maxDogStep = 0;    // [NEW] Stores max slider value
+        let maxDogStep = 0;     // [NEW] Stores max slider value
 
         // --- DOM ELEMENT REFERENCES ---
         const svgEl = document.getElementById('canvas');
@@ -463,7 +543,7 @@
             sliderDogEl.value = 0;
             sliderWalkerEl.value = 0;
             maxWalkerStep = 0; // [NEW] Reset max step
-            maxDogStep = 0;    // [NEW] Reset max step
+            maxDogStep = 0;     // [NEW] Reset max step
             resetMaxLeash();
         }
 
